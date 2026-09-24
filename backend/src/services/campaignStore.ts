@@ -140,6 +140,10 @@ export function resetTime(): void {
   _currentTime = null;
 }
 
+export function getCurrentTimeState(): number | null {
+  return _currentTime;
+}
+
 function nowInSeconds(): number {
   return Math.floor(getCurrentTime() / 1000);
 }
@@ -153,6 +157,14 @@ function getCurrentTime(): number {
     return _currentTime;
   }
   return Date.now();
+}
+
+export function setGlobalTime(time: number): void {
+  _currentTime = time;
+}
+
+export function resetGlobalTime(): void {
+  _currentTime = null;
 }
 
 function round(value: number): number {
@@ -357,8 +369,37 @@ export function listContributorPledges(
 export function initCampaignStore(): void {
   initDb();
   const db = getDb();
+  db.exec('CREATE TABLE IF NOT EXISTS campaigns (
+    id TEXT PRIMARY KEY,
+    creator TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    accepted_tokens_json TEXT NOT NULL,
+    target_amount REAL NOT NULL,
+    pledged_amount REAL NOT NULL DEFAULT 0,
+    deadline INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    claimed_at INTEGER,
+    failed_at INTEGER,
+    deleted_at INTEGER,
+    metadata_json TEXT,
+    max_per_contributor REAL
+  );');
+  db.exec('CREATE TABLE IF NOT EXISTS pledges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id TEXT NOT NULL,
+    contributor TEXT NOT NULL,
+    amount REAL NOT NULL,
+    asset_code TEXT NOT NULL,
+    token_id TEXT,
+    created_at INTEGER NOT NULL,
+    refunded_at INTEGER,
+    transaction_hash TEXT,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id)
+  );');
   db.exec('CREATE INDEX IF NOT EXISTS idx_pledges_campaign_id ON pledges(campaign_id);');
   db.exec('CREATE INDEX IF NOT EXISTS idx_pledges_contributor_created_at ON pledges(contributor, created_at);');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_pledges_transaction_hash ON pledges(transaction_hash);');
 }
 
 function checkContributorLimit(

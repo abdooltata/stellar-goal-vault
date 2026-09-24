@@ -4,6 +4,8 @@ import path from 'path';
 
 type SQLiteDatabase = ReturnType<typeof Database>;
 
+// Module-level singleton for production use only.
+// Tests should use initDb(path) with an isolated path or :memory:.
 let db: SQLiteDatabase | null = null;
 
 function resolveDbPath(): string {
@@ -20,12 +22,12 @@ export function getDb(): SQLiteDatabase {
   return db;
 }
 
-export function initDb(): void {
+export function initDb(customPath?: string): void {
   if (db) {
     return;
   }
 
-  const dbPath = resolveDbPath();
+  const dbPath = customPath || resolveDbPath();
   const dir = path.dirname(dbPath);
 
   if (dbPath !== ':memory:' && !fs.existsSync(dir)) {
@@ -95,7 +97,8 @@ export function getPledgesByContributor(
   const offset = Math.max((page - 1) * limit, 0);
   const rows = database
     .prepare(
-      `      SELECT
+      `
+      SELECT
         p.id,
         p.campaign_id AS campaignId,
         c.title AS campaignName,
